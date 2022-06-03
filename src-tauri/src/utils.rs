@@ -5,7 +5,7 @@ use std::io::{BufReader, BufWriter};
 use std::path::Path;
 use std::time::SystemTime;
 
-const SUPPORTED_FILES: &'static [&str] = &[".CR3", ".MP4"];
+const SUPPORTED_FILES: &'static [&str] = &[".ARW", ".CR3", ".MP4"];
 
 pub fn is_supported_file(name: &str) -> bool {
     let mut result = false;
