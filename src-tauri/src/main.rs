@@ -26,59 +26,63 @@ fn recursive_copy(
     copied: &mut u32,
     skipped: &mut u32,
 ) -> io::Result<()> {
-    for entry in fs::read_dir(source)? {
-        // All errors are propagated
-        let entry = entry?;
-        let file_name = entry
-            .file_name()
-            .into_string()
-            .expect("Unable to convert filename to string");
-        let metadata = entry.metadata()?;
-        let created = metadata.created()?;
+    match fs::read_dir(source) {
+        Ok(dir_contents) => {
+            for entry in dir_contents {
+                let entry = entry?;
+                let file_name = entry
+                    .file_name()
+                    .into_string()
+                    .expect("Unable to convert filename to string");
+                let metadata = entry.metadata()?;
+                let created = metadata.created()?;
 
-        // Recurse directories
-        if metadata.is_dir() {
-            recursive_copy(
-                window,
-                entry.path().as_path(),
-                destination,
-                history,
-                copied,
-                skipped,
-            )?;
-            continue;
-        }
+                // Recurse directories
+                if metadata.is_dir() {
+                    recursive_copy(
+                        window,
+                        entry.path().as_path(),
+                        destination,
+                        history,
+                        copied,
+                        skipped,
+                    )?;
+                    continue;
+                }
 
-        // Don't do anything with non-image/video files
-        if !is_supported_file(&file_name) {
-            continue;
-        }
+                // Don't do anything with non-image/video files
+                if !is_supported_file(&file_name) {
+                    continue;
+                }
 
-        // Check if file has previously been copied
-        if history.seen_before(&file_name, &created) {
-            *skipped += 1;
-            window
-                .emit(EVENT_SKIP, CountPayload { count: *skipped })
-                .expect("Failed to emit skip event.");
-            continue;
-        }
+                // Check if file has previously been copied
+                if history.seen_before(&file_name, &created) {
+                    *skipped += 1;
+                    window
+                        .emit(EVENT_SKIP, CountPayload { count: *skipped })
+                        .expect("Failed to emit skip event.");
+                    continue;
+                }
 
-        // Copy to destination
-        let created_date: DateTime<Utc> = created.into();
-        let dest_dir = destination.join(created_date.format("%Y_%m_%d").to_string());
+                // Copy to destination
+                let created_date: DateTime<Utc> = created.into();
+                let dest_dir = destination.join(created_date.format("%Y_%m_%d").to_string());
 
-        if !dest_dir.exists() {
-            fs::create_dir(&dest_dir)?;
-        }
-        fs::copy(entry.path(), dest_dir.join(&file_name))?;
+                if !dest_dir.exists() {
+                    fs::create_dir(&dest_dir)?;
+                }
+                fs::copy(entry.path(), dest_dir.join(&file_name))?;
 
-        history.add_file(&file_name, &created);
-        *copied += 1;
-        window
-            .emit(EVENT_COPY, CountPayload { count: *copied })
-            .expect("Failed to emit copy event.");
+                history.add_file(&file_name, &created);
+                *copied += 1;
+                window
+                    .emit(EVENT_COPY, CountPayload { count: *copied })
+                    .expect("Failed to emit copy event.");
+            }
+            Ok(())
+        },
+        Err(_) => Ok(()) // Ignore errors whilst opening directories
     }
-    Ok(())
 }
 
 #[tauri::command(async)]
