@@ -80,8 +80,8 @@ fn recursive_copy(
                     .expect("Failed to emit copy event.");
             }
             Ok(())
-        },
-        Err(_) => Ok(()) // Ignore errors whilst opening directories
+        }
+        Err(_) => Ok(()), // Ignore errors whilst opening directories
     }
 }
 
