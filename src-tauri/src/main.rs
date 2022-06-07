@@ -29,13 +29,25 @@ fn recursive_copy(
     match fs::read_dir(source) {
         Ok(dir_contents) => {
             for entry in dir_contents {
-                let entry = entry?;
+                let entry = match entry {
+                    Ok(entry) => entry,
+                    Err(_) => continue,
+                };
+
+                let metadata = match entry.metadata() {
+                    Ok(m) => m,
+                    Err(_) => continue,
+                };
+
+                let created = match metadata.created() {
+                    Ok(c) => c,
+                    Err(_) => continue,
+                };
+
                 let file_name = entry
                     .file_name()
                     .into_string()
                     .expect("Unable to convert filename to string");
-                let metadata = entry.metadata()?;
-                let created = metadata.created()?;
 
                 // Recurse directories
                 if metadata.is_dir() {
