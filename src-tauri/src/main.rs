@@ -32,7 +32,7 @@ fn copy_file(entry: &DirEntry, dest: &Path) -> io::Result<()> {
     if !dest_dir.exists() {
         fs::create_dir(&dest_dir)?;
     }
-    fs::copy(entry.path(), dest_dir.join(&file_name))?;
+    fs::copy(entry.path(), dest_dir.join(file_name))?;
     Ok(())
 }
 
@@ -42,12 +42,12 @@ fn start_copy(window: tauri::Window, source: String, destination: String) -> Res
     let dest = Path::new(&destination);
 
     // Load seen files data
-    let mut history = History::new(&src);
+    let mut history = History::new(src);
 
     let mut copied = 0;
     let mut skipped = 0;
 
-    let entries = WalkDir::new(&src)
+    let entries = WalkDir::new(src)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| is_supported_file(e.file_name().to_str().unwrap()));
@@ -64,15 +64,15 @@ fn start_copy(window: tauri::Window, source: String, destination: String) -> Res
             continue;
         }
 
-        match copy_file(&entry, &dest) {
+        match copy_file(&entry, dest) {
             Ok(_) => {
-                history.add_file(&name, &created);
+                history.add_file(name, &created);
                 copied += 1;
                 window
                     .emit(EVENT_COPY, CountPayload { count: copied })
                     .expect("Failed to emit copy event.");
             }
-            Err(e) => println!("{}", e.to_string()),
+            Err(error) => println!("{}", error),
         }
     }
     Ok(())

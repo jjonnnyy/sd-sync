@@ -5,7 +5,7 @@ use std::io::{BufReader, BufWriter};
 use std::path::Path;
 use std::time::SystemTime;
 
-const SUPPORTED_FILES: &'static [&str] = &[".ARW", ".CR3", ".MP4"];
+const SUPPORTED_FILES: &[&str] = &[".ARW", ".CR3", ".MP4"];
 
 pub fn is_supported_file(name: &str) -> bool {
     for suffix in SUPPORTED_FILES {
@@ -32,7 +32,7 @@ impl History<'_> {
         let seen_files = match fs::File::open(dir_path.join(HISTORY_FILENAME)) {
             Ok(f) => {
                 let reader = BufReader::new(f);
-                deserialize_from(reader).unwrap_or(Vec::new())
+                deserialize_from(reader).unwrap_or_default()
             }
             Err(_) => Vec::new(),
         };
