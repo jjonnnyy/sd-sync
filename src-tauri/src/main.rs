@@ -8,7 +8,6 @@ mod utils;
 use crate::utils::{is_supported_file, History};
 use chrono::{DateTime, Utc};
 use std::path::Path;
-use std::sync::Mutex;
 use std::{fs, io};
 use walkdir::{DirEntry, WalkDir};
 
@@ -43,7 +42,7 @@ fn start_copy(window: tauri::Window, source: String, destination: String) -> Res
     let dest = Path::new(&destination);
 
     // Load seen files data
-    let history = Mutex::new(History::new(&src));
+    let mut history = History::new(&src);
 
     let mut copied = 0;
     let mut skipped = 0;
@@ -51,26 +50,23 @@ fn start_copy(window: tauri::Window, source: String, destination: String) -> Res
     let entries = WalkDir::new(&src)
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter(|e| is_supported_file(e.file_name().to_str().unwrap()))
-        .filter(|e| {
-            let name = e.file_name().to_str().unwrap();
-            let created = e.metadata().unwrap().created().unwrap();
-            let seen = history.lock().unwrap().seen_before(name, &created);
-            if seen {
-                skipped += 1;
-                window
-                    .emit(EVENT_SKIP, CountPayload { count: skipped })
-                    .expect("Failed to emit skip event.");
-            }
-            !seen
-        });
+        .filter(|e| is_supported_file(e.file_name().to_str().unwrap()));
 
     for entry in entries {
+        let name = entry.file_name().to_str().unwrap();
+        let created = entry.metadata().unwrap().created().unwrap();
+
+        if history.seen_before(name, &created) {
+            skipped += 1;
+            window
+                .emit(EVENT_SKIP, CountPayload { count: skipped })
+                .expect("Failed to emit skip event.");
+            continue;
+        }
+
         match copy_file(&entry, &dest) {
             Ok(_) => {
-                let name = entry.file_name().to_str().unwrap();
-                let created = entry.metadata().unwrap().created().unwrap();
-                history.lock().unwrap().add_file(&name, &created);
+                history.add_file(&name, &created);
                 copied += 1;
                 window
                     .emit(EVENT_COPY, CountPayload { count: copied })
