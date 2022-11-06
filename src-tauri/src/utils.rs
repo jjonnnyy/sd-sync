@@ -8,13 +8,12 @@ use std::time::SystemTime;
 const SUPPORTED_FILES: &'static [&str] = &[".ARW", ".CR3", ".MP4"];
 
 pub fn is_supported_file(name: &str) -> bool {
-    let mut result = false;
     for suffix in SUPPORTED_FILES {
         if name.ends_with(suffix) {
-            result = true;
+            return true;
         }
     }
-    result
+    false
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
